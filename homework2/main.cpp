@@ -12,11 +12,7 @@ void print_arr(vector <double>& arr) {
 }
 
 //ô-ÿ ÷òåíèÿ ôàéëà
-vector<double> readFile() {
-    string line;
-    
-    return points;
-}
+
 
 vector<double> divider(vector<double>& arr, string type) {
     int n = arr.size();
