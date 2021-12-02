@@ -33,7 +33,7 @@ int main()
 	double x0, y0;
 	Points point;
 	double distance0, distanceR = 0, distanceL = 0;
-	ifstream file("C:/Users/Endakota/Documents/Учеба/МатМод/homework/out/build/windows-default/homework1/in.txt");
+	ifstream file("in.txt");
 	if (!file.is_open()) {
 		cout << "OpenError";
 	}
