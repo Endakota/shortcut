@@ -6,6 +6,6 @@ cmake_minimum_required (VERSION 3.8)
 project ("homework")
 
 # Include sub-projects.
-add_subdirectory ("homework")
+
 add_subdirectory(homework1)
 add_subdirectory(homework2)
