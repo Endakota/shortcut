@@ -1,89 +1,173 @@
 #include <iostream>
+#include <fstream>
+#include <string>
 #include <vector>
 #include <cmath>
-#include <string>
-#include <fstream>
-using namespace std;
 
-void print_arr(vector <double>& arr) {
-    for (int i = 0; i < arr.size(); i++) {
-        cout << arr[i] << endl;
+//считывание с файла всех координат в формате string
+std::vector<std::string> FileReader(const std::string& File_name){
+    std::string str;
+    std::vector<std::string> DotsInString;
+    std::ifstream CoordsFile;
+
+    CoordsFile.open(File_name);
+
+    if (CoordsFile.is_open()) {
+        while (!CoordsFile.eof()){
+            str = "";
+            CoordsFile >> str;
+            DotsInString.push_back(str);
+        }
+    } else{
+        std::cout << "there is no file"<< std::endl;
     }
+
+    CoordsFile.close();
+
+    return DotsInString;
 }
 
-//ô-ÿ ÷òåíèÿ ôàéëà
-
-
-vector<double> divider(vector<double>& arr, string type) {
-    int n = arr.size();
-    vector<double> X_obs;
-    vector<double> Y_obs;
-    for (int i = 0; i < n; i++) {
-        if (i % 2 == 0) {
-            X_obs.push_back(arr[i]);
-        }
-        else {
-            Y_obs.push_back(arr[i]);
-        }
+//переводит координаты в double
+std::vector<double> CoordsFinder(std::vector<std::string> array) {
+    std::vector<double> coords;
+    for (int i = 0; i < array.size(); i++) {
+        std::string b = array[i];
+        double c = std::strtod(b.c_str(), nullptr);
+        coords.push_back(c);
     }
-    return (type == "X") ? X_obs : Y_obs;
+    return coords;
 }
 
-double dvizh(double h, double alpha, double x, double g, double v0) {
-    double y;
-    y = h + tan(alpha) * x - pow(x, 2) * g / (2 * pow(v0 * cos(alpha), 2));
-    return y;
+//разделяет x и h стенок
+std::vector<double> x_and_h_coords(std::vector<double> array, int n) {
+    std::vector<double> coords;
+    for (int i = 0; i < array.size() / 2; i++) {
+        coords.push_back(array[2 * i + n]);
+    }
+    return coords;
 }
 
-int main(int argc, char** argv) {
-    if (argc == 2) {
-        vector <double> points;
-        ifstream file(argv[1]);
-        if (file.is_open()) {
-            string str;
-            while (!file.eof()) {
-                file >> str;
-                points.push_back(stod(str));
-            }
-        }
-        else {
-            cout << "Error";
-        }
-        file.close();
-
-        double h = (points[0]);
-        points.erase(points.begin());
-        double vx = points[0];
-        double vy = points[1];
-        points.erase(points.begin());
-        points.erase(points.begin());
-        vector <double> X_obs = divider(points, "X");
-        vector <double> Y_obs = divider(points, "Y");
-        double g = 10;
-        double tanAlpha = vy / vx;
-        double alpha = atan(tanAlpha);
-        double v0 = vx / cos(alpha);
-        bool pp = false;
-        int i = 0;
-
-        for (int i = 0; i < X_obs.size(); i++) {
-            if (dvizh(h, alpha, X_obs[i], g, v0) <= Y_obs[i]) {
-                cout << i << endl;
-                pp = false;
-                break;
-            }
-            else {
-                pp = true;
-            }
-        }
-        if (pp == true) {
-            cout << X_obs.size();
-        }
+//рекурсия для учёта сдвига парабол
+double recurs(std::vector<double> X, double n){
+    if (n == 0) {
+        return 0;
     }
     else {
-        cout << "Wrong arguments";
+        return 2 * X[n-1] - recurs(X, n - 1);
     }
-    
+}
 
-    return 0;
+//значения координаты материальной точки при координате x стенок
+std::vector<double> y_Coords_Finder(std::vector<double> xCoords, double vx, double vy, double h0, double g, int n, std::vector<double> xCollision){
+    std::vector<double> yCoords;
+    for(int i = 0; i < xCoords.size(); i++){
+        double y = h0 + pow(-1, n) * (xCoords[i] - recurs(xCollision, n)) * vy / vx - pow((xCoords[i] - recurs(xCollision,n)),2) * g / (2*vx*vx);
+        yCoords.push_back(y);
+    }
+    return yCoords;
+}
+
+
+int main(int argc, char** argv){
+
+    if (argc == 2) {
+
+
+        std::vector<double> xCollision;
+
+        int n = 0;
+        int xCollise;
+
+        std::string path = argv[1];
+
+        std::vector<std::string> coords_in_string = FileReader(path);
+        std::vector<double> coords = CoordsFinder(coords_in_string);
+
+
+
+        double g = 9.81;
+        double h0 = coords[0];
+        double vx = coords[1];
+        double vy = coords[2];
+
+        //удаляем из массива с координатами константы
+        coords.erase(coords.begin() + 0, coords.begin() + 3);
+
+
+
+        if (coords.size() <= 1) {
+
+            std::cout << 0;
+
+        } else {
+
+            //разделим на разные векторы координаты по х и у стенок
+            std::vector<double> hCoords = x_and_h_coords(coords, 1);
+            std::vector<double> xCoords = x_and_h_coords(coords, 0);
+
+
+            std::vector<double> yCoords = y_Coords_Finder(xCoords, vx, vy, h0, g, n, xCollision);
+
+
+            //  П Р О В Е Р К А  Н А  П Е Р В О Е  С Т О Л К Н О В Е Н И Е
+
+            for (int i = 0; i < xCoords.size(); i++) {
+                if (yCoords[i] < hCoords[i] && yCoords[i] >= 0) {
+                    xCollision.push_back(xCoords[i]);
+                    xCollise = i;
+                    n++;
+                    break;
+                }
+
+                if (yCoords[i] < hCoords[i] && yCoords[i] < 0) {
+
+                    std::cout <<i + 1;
+                    return 0;
+                }
+
+                if (yCoords[xCoords.size() - 1] > hCoords[xCoords.size() - 1]) {
+                    std::cout <<xCoords.size();
+                    return 0;
+                }
+            }
+
+            vx = -vx;
+
+
+            // С Т О Л К Н О В Е Н И Я  Е С Т Ь
+
+            while (true) {
+
+                if (vx < 0) {
+
+                    yCoords = y_Coords_Finder(xCoords, vx, vy, h0, g, n, xCollision);
+
+                    for (int i = xCollise; i >= 0; i--) {
+
+                        if (yCoords[i] < hCoords[i] && yCoords[i] >= 0) {
+                            xCollision.push_back(xCoords[i]);
+                            xCollise = i;
+                            n++;
+                            break;
+
+                        }
+                        if (yCoords[i] < hCoords[i] && yCoords[i] < 0) {
+
+                            std::cout <<i;
+
+                            return 0;
+
+                        }
+                        if (yCoords[i] > hCoords[0]) {
+                            std::cout <<i;
+                        }
+
+                    }
+                    vx = -vx;
+                }
+            }
+        }
+    } else{
+        std::cout << "there are too few or too many arguments" << std::endl;
+    }
 }
