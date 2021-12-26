@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
         Point s1;
         double x, y;
         vector <double> x_b, y_b;
-        ifstream file(argv[0]);
+        ifstream file(argv[1]);
         double h, vx, vy, g = 9.81;
 
         if (file.is_open()) {
