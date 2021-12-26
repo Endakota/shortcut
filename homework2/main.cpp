@@ -1,90 +1,134 @@
-
 #include <iostream>
-#include <vector>
-#include <cmath>
-#include <string>
 #include <fstream>
+#include <cmath>
+#include <vector>
 using namespace std;
-
-void print_arr(vector <double>& arr) {
-    for (int i = 0; i < arr.size(); i++) {
-        cout << arr[i] << endl;
-    }
-}
-
-//ô-ÿ ÷òåíèÿ ôàéëà
-
-
-vector<double> divider(vector<double>& arr, string type) {
-    int n = arr.size();
-    vector<double> X_obs;
-    vector<double> Y_obs;
-    for (int i = 0; i < n; i++) {
-        if (i % 2 == 0) {
-            X_obs.push_back(arr[i]);
+class Point {
+	public:
+        double h, vx, vy,g;
+        void setParametrs(double h, double vx, double vy, double g) {
+            this->h = h;
+            this->vx = vx;
+            this->vy = vy;
+            this->g = g;
         }
-        else {
-            Y_obs.push_back(arr[i]);
+        double move(double x, double alpha) {
+            return h + x * tan(alpha) - (x*x * g) / (2 * vx * vx);
         }
-    }
-    return (type == "X") ? X_obs : Y_obs;
-}
-
-double dvizh(double h, double alpha, double x, double g, double v0) {
-    double y;
-    y = h + tan(alpha) * x - pow(x, 2) * g / (2 * pow(v0 * cos(alpha), 2));
-    return y;
-}
+        //return h - pow(-1,n)*(x-recurs(X,n)) * tan(alpha) - ((x - recurs(X, n))*(x - recurs(X, n)) * g) / (2 * vx * vx);
+        bool underFirst(vector<double>& x, vector < double > &y) {
+            return (this->move(x[0], atan(vy / vx)) <= y[0]) ? true : false;
+        }
+        bool allIsAbove(vector<double>& x, vector < double >& y) {
+            bool isAbove = false;
+            for (int i = 0; i < x.size(); i++) {
+                if (this->move(x[i], atan(vy / vx)) <= y[i]){
+                    isAbove = false;
+                    break;
+                }
+                else{
+                    isAbove = true;
+                }
+            }
+            return isAbove;
+        }
+        void nonTrivialMove(vector<double>& x, vector < double >& y) {
+            bool right = true;
+            int index = 0;
+            int n = 0; // удары
+            vector<double> XSaved;
+            while (true) {
+                if (n % 2 == 0) {
+                    for (int i = index; i < x.size(); i++) {
+                        right = true;
+                        if (this->nthMove(x[i], XSaved, atan(vy / vx), n) < y[i]) {
+                            n+=1;
+                            XSaved.push_back(x[i]);
+                            index = i;
+                            break;
+                        }
+                    }
+                }
+                else {
+                    for (int i = index-1; i >= 0; i--) {
+                        right = false;
+                        if (this->nthMove(x[i], XSaved, atan(vy / vx), n) < y[i]) {
+                            n+=1;
+                            XSaved.push_back(x[i]);
+                            index = i;
+                            break;
+                        }
+                    }
+                }
+                if (this->nthMove(x[index], XSaved, atan(vy / vx), n) < 0) {
+                    
+                    if (right) {
+                        cout << index;
+                    }
+                    else {
+                        cout << index + 1;
+                    }
+                    break;
+                }
+            }
+            
+        }
+        double recurs(vector<double>& X, int n) {
+            if (n == 0) {
+                return 0;
+            }
+            else {
+                return 2 * X[n-1] - recurs(X, n - 1);
+            }
+        }
+        double nthMove(double x, vector<double> X, double alpha,int n) {
+            return h + pow(-1, n) * (x - recurs(X, n)) * tan(alpha) - ((x - recurs(X, n)) * (x - recurs(X, n)) * g) / (2 * vx * vx);
+        }
+        
+};
 
 int main(int argc, char** argv) {
-    if (argc == 2) {
-        vector <double> points;
-        ifstream file(argv[1]);
+    if (argc == 1) {
+        Point s1;
+        double x, y;
+        vector <double> x_b, y_b;
+        ifstream file(argv[0]);
+        double h, vx, vy, g = 9.81;
+
         if (file.is_open()) {
-            string str;
-            while (!file.eof()) {
-                file >> str;
-                points.push_back(stod(str));
+            file >> h >> vx >> vy;
+            s1.setParametrs(h, vx, vy, g);
+            while (file >> x >> y) {
+                x_b.push_back(x);
+                y_b.push_back(y);
             }
+            if (x_b.empty()) {
+                cout << 0;
+                return 0;
+            }
+            
+            /* Шар не долетел даже до первой */
+            if (s1.allIsAbove(x_b, y_b)) {
+                cout << x_b.size();
+
+            }
+            // Шар перелетел все барьеры 
+            else if (s1.underFirst(x_b,y_b)) {
+                cout << 0;
+            }
+            else {
+                s1.nonTrivialMove(x_b, y_b);
+            }
+
         }
         else {
             cout << "Error";
         }
         file.close();
-
-        double h = (points[0]);
-        points.erase(points.begin());
-        double vx = points[0];
-        double vy = points[1];
-        points.erase(points.begin());
-        points.erase(points.begin());
-        vector <double> X_obs = divider(points, "X");
-        vector <double> Y_obs = divider(points, "Y");
-        double g = 10;
-        double tanAlpha = vy / vx;
-        double alpha = atan(tanAlpha);
-        double v0 = vx / cos(alpha);
-        bool pp = false;
-        int i = 0;
-
-        for (int i = 0; i < X_obs.size(); i++) {
-            if (dvizh(h, alpha, X_obs[i], g, v0) <= Y_obs[i]) {
-                cout << i << endl;
-                pp = false;
-                break;
-            }
-            else {
-                pp = true;
-            }
-        }
-        if (pp == true) {
-            cout << X_obs.size();
-        }
     }
     else {
         cout << "Wrong arguments";
     }
-    
-
     return 0;
+    
 }
