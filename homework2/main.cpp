@@ -88,7 +88,7 @@ class Point {
 };
 
 int main(int argc, char** argv) {
-    if (argc == 1) {
+    if (argc == 2) {
         Point s1;
         double x, y;
         vector <double> x_b, y_b;
